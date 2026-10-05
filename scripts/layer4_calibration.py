@@ -2,7 +2,7 @@
 
 The pricer uses one deterministic vol per date (the ATM term structure).
 The knock-in put, though, is struck far below the money: at 3y the 70%
-barrier is around k = ln(0.7 S / F) = -0.67 because NIFTY forwards carry
+barrier is around k = ln(0.7 S / F) = -0.56 because NIFTY forwards carry
 about 6.5% a year. Equity smiles are steep there. The last table prices
 the note with a flat vol read off the longest liquid smile at different
 strikes, to show how far a skew-aware model could move the price.
