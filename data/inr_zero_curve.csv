@@ -1,0 +1,13 @@
+# Approximate INR sovereign zero curve for 2026-10-01, continuously compounded, ACT/365F.
+# Anchors: RBI repo 5.25% and 10Y G-sec ~7.21% (semi-annual) in early October 2026.
+# Interior points are interpolated by hand, not bootstrapped from bond prices.
+# Replace with the FBIL/CCIL zero coupon yield curve for production use.
+tenor,zero_rate
+0.25,0.0550
+0.5,0.0565
+1,0.0585
+2,0.0620
+3,0.0645
+5,0.0680
+7,0.0698
+10,0.0708
