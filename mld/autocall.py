@@ -138,14 +138,23 @@ def apply_control_variates(y: np.ndarray, X: np.ndarray, mu: np.ndarray):
     return y - (X - mu) @ beta, beta
 
 
-def evaluate(spec: AutocallSpec, ps: PathSummary, market: Market, s_ref: float | None = None,
-             credit_spread: float = 0.0, control: str | None = None) -> AutocallResult:
-    """Value an already simulated set of paths at market.spot."""
+def path_pv(spec: AutocallSpec, ps: PathSummary, market: Market, s_ref: float | None = None,
+            credit_spread: float = 0.0):
+    """Discounted payoff of every simulated path (before pairing antithetics)."""
     spot = market.spot
     s_ref = spot if s_ref is None else s_ref
     dfs = note_dfs(spec, market, credit_spread)
     principal, cyears, k_pay, knocked = cashflows(spec, ps, spot, s_ref)
     pv = dfs[k_pay] * (principal + spec.notional * spec.coupon_rate * cyears)
+    return pv, principal, cyears, k_pay, knocked
+
+
+def evaluate(spec: AutocallSpec, ps: PathSummary, market: Market, s_ref: float | None = None,
+             credit_spread: float = 0.0, control: str | None = None) -> AutocallResult:
+    """Value an already simulated set of paths at market.spot."""
+    spot = market.spot
+    s_ref = spot if s_ref is None else s_ref
+    pv, principal, cyears, k_pay, knocked = path_pv(spec, ps, market, s_ref, credit_spread)
 
     pm = ps.pair_mean
     y = pm(pv)
