@@ -17,7 +17,7 @@ from mld.calibration import calibrate
 N = 400_000
 m = calibrate().market
 ps = simulate_for(SPEC, m, N, seed=11, antithetic=True)
-res = evaluate(SPEC, ps, m, credit_spread=SPREAD, control="full")
+res = evaluate(SPEC, ps, m, credit_spread=SPREAD, control="events")
 pv, principal, cyears, k_pay, knocked = path_pv(SPEC, ps, m, credit_spread=SPREAD)
 
 loss = principal < SPEC.notional - 1e-12
@@ -47,7 +47,7 @@ c_par = fair_coupon(SPEC, m, 100.0, N, seed=11, credit_spread=SPREAD)
 
 # Monitoring convention: daily closes vs final fixing only
 eur = replace(SPEC, ki_daily=False)
-r_eur = evaluate(eur, simulate_for(eur, m, N, seed=11, antithetic=True), m, credit_spread=SPREAD, control="full")
+r_eur = evaluate(eur, simulate_for(eur, m, N, seed=11, antithetic=True), m, credit_spread=SPREAD, control="events")
 mon = pd.DataFrame([
     dict(barrier="Daily closes (base)", price=res.price.value, prob_ki=res.prob_ki, prob_loss=res.prob_loss),
     dict(barrier="Final fixing only", price=r_eur.price.value, prob_ki=r_eur.prob_ki, prob_loss=r_eur.prob_loss),
@@ -58,7 +58,7 @@ write_md("layer2.md", f"""
 
 Term sheet: 3y on NIFTY 50, initial fixing {m.spot:,.2f}, annual observations, autocall at 100%,
 {SPEC.coupon_rate:.0%} p.a. snowball coupon, 70% knock-in on daily closes, issuer spread {SPREAD*1e4:.0f}bp.
-{N:,} paths, antithetic with control variates.
+{N:,} paths, antithetic with event control variates (mld/analytic.py).
 
 | Item | Value (per 100) |
 |---|---|
