@@ -15,8 +15,8 @@ Steps
 3. Smile. Per expiry, a quadratic in log-moneyness k = ln(K/F) over |k| <= 0.3:
    sigma(k) = a + b k + c k^2. Few long-dated strikes trade, so anything with
    more parameters overfits. `a` is the ATM-forward vol.
-4. Term structure. ATM vols from expiries with enough strikes on both sides
-   of the money, pruned so total variance increases with T.
+4. Term structure. ATM vols from expiries with at least 8 quotes on both
+   sides of the money, pruned so total variance increases with T.
 """
 from __future__ import annotations
 
@@ -116,13 +116,16 @@ def fit_smiles(ivs: pd.DataFrame, min_points: int = 5, k_limit: float = 0.30) ->
 
 
 def smile_vol(row, k):
-    return row.atm_vol + row.skew * k + row.curvature * k ** 2
+    # item access: on a pandas Series, `.skew` is the skew() method, not the column
+    return row["atm_vol"] + row["skew"] * k + row["curvature"] * k ** 2
 
 
-def atm_term_structure(smiles: pd.DataFrame, k_cover: float = 0.03) -> VolTermStructure:
-    """ATM vol pillars from smiles whose quotes straddle the money, keeping only
-    pillars that extend total variance (no calendar arbitrage)."""
-    ok = smiles[(smiles.k_min <= -k_cover) & (smiles.k_max >= k_cover)].sort_values("T")
+def atm_term_structure(smiles: pd.DataFrame, k_cover: float = 0.03, min_quotes: int = 8) -> VolTermStructure:
+    """ATM vol pillars from smiles with at least `min_quotes` quotes that
+    straddle the money, keeping only pillars that extend total variance (no
+    calendar arbitrage). The quote floor drops Jun-2027, whose 6 quotes put
+    ATM vol 1 point below both neighbours."""
+    ok = smiles[(smiles.k_min <= -k_cover) & (smiles.k_max >= k_cover) & (smiles.n >= min_quotes)].sort_values("T")
     tenors, vols, w_prev = [], [], 0.0
     for r in ok.itertuples():
         w = r.atm_vol ** 2 * r.T
