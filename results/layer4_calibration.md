@@ -22,6 +22,24 @@ NIFTY forwards imply about 6.5% carry, at or above the INR zero curve, so the im
 slightly negative. Index futures in India usually trade rich to G-secs. The pricer takes forwards
 from the market, since futures are the hedge, and discounts on the rate curve.
 
+### Why rates do not come from the chain
+
+Regressing C - P on K across strikes gives both the discount factor and the forward. The forwards
+are stable, the implied rates are not (they range from -22.8% to 34.8%),
+because NSE option closes are not synchronous across strikes.
+
+| expiry | T | n_pairs | box_rate | box_forward |
+|---|---|---|---|---|
+| 2026-10-13 | 0.0329 | 62 | 0.0357 | 22479.5761 |
+| 2026-10-19 | 0.0493 | 39 | -0.2283 | 22495.8085 |
+| 2026-10-27 | 0.0712 | 77 | -0.0703 | 22518.7671 |
+| 2026-11-03 | 0.0904 | 26 | 0.3485 | 22539.6191 |
+| 2026-11-23 | 0.1452 | 51 | 0.0929 | 22632.1945 |
+| 2026-12-29 | 0.2438 | 62 | 0.1418 | 22774.7113 |
+| 2027-03-30 | 0.4932 | 3 | 0.1131 | 23184.3895 |
+| 2027-12-28 | 1.2411 | 6 | 0.1109 | 24196.0046 |
+| 2028-12-26 | 2.2384 | 2 | 0.0584 | 25917.7525 |
+
 ### Smiles (quadratic in k = ln(K/F), fitted on |k| <= 0.3)
 
 | expiry | T | n | atm_vol | skew | curvature | rmse |

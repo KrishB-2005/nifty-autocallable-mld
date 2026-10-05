@@ -81,6 +81,27 @@ def implied_forwards(chain: Chain, curve: DiscountCurve, band: float = 0.10) -> 
     return out.reset_index(drop=True)
 
 
+def box_implied_rates(chain: Chain, band: float = 0.10) -> pd.DataFrame:
+    """Diagnostic: regress C - P = D (F - K) across strikes to get both D and F
+    from the chain alone. Asynchronous closes make D useless (see module notes)."""
+    rows = []
+    for exp, g in chain.options.groupby("expiry"):
+        T = float(g["T"].iloc[0])
+        c = g[g.kind == "call"].set_index("K").price
+        p = g[g.kind == "put"].set_index("K").price
+        ks = c.index.intersection(p.index)
+        if T < 1:
+            ks = ks[np.abs(ks / chain.spot - 1) <= band]
+        if len(ks) < 2:
+            continue
+        A = np.column_stack([np.ones(len(ks)), ks.values])
+        (a, b), *_ = np.linalg.lstsq(A, (c[ks] - p[ks]).values, rcond=None)
+        D = -b
+        rows.append(dict(expiry=exp, T=T, n_pairs=len(ks), box_rate=-np.log(D) / T if D > 0 else np.nan,
+                         box_forward=a / D))
+    return pd.DataFrame(rows)
+
+
 def implied_vols(chain: Chain, fwd: pd.DataFrame, curve: DiscountCurve, min_price: float = 0.5) -> pd.DataFrame:
     F_of = dict(zip(fwd.expiry, fwd.F))
     rows = []

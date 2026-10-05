@@ -1,7 +1,7 @@
 """Layer 4: what the NSE option chain says, and how much the vol choice matters.
 
 The pricer uses one deterministic vol per date (the ATM term structure).
-The knock-in put, though, is struck far below the money: at 3y the 70%
+The investor's short put only knocks in far below the money: at 3y the 70%
 barrier is around k = ln(0.7 S / F) = -0.56 because NIFTY forwards carry
 about 6.5% a year. Equity smiles are steep there. The last table prices
 the note with a flat vol read off the longest liquid smile at different
@@ -12,7 +12,7 @@ import pandas as pd
 
 from _common import BLUE, INK2, ORANGE, SPEC, SPREAD, df_to_md, plt, save, write_md
 from mld.autocall import price
-from mld.calibration import calibrate, smile_vol
+from mld.calibration import box_implied_rates, calibrate, smile_vol
 from mld.market import Market, VolTermStructure
 
 cal = calibrate()
@@ -75,6 +75,8 @@ for pct in (1.00, 0.85, 0.70):
                      price=p.value, diff_vs_base=p.value - base.value))
 skew = pd.DataFrame(rows)
 
+box = box_implied_rates(cal.chain)
+box_tbl = box.assign(expiry=box.expiry.dt.strftime("%Y-%m-%d"))
 fwd_tbl = fw.assign(expiry=fw.expiry.dt.strftime("%Y-%m-%d"))[
     ["expiry", "T", "F", "source", "n_pairs", "carry", "r", "q_implied"]]
 smile_tbl = cal.smiles.assign(expiry=cal.smiles.expiry.dt.strftime("%Y-%m-%d"))[
@@ -91,6 +93,14 @@ write_md("layer4_calibration.md", f"""
 NIFTY forwards imply about 6.5% carry, at or above the INR zero curve, so the implied dividend yield is
 slightly negative. Index futures in India usually trade rich to G-secs. The pricer takes forwards
 from the market, since futures are the hedge, and discounts on the rate curve.
+
+### Why rates do not come from the chain
+
+Regressing C - P on K across strikes gives both the discount factor and the forward. The forwards
+are stable, the implied rates are not (they range from {box.box_rate.min():.1%} to {box.box_rate.max():.1%}),
+because NSE option closes are not synchronous across strikes.
+
+{df_to_md(box_tbl, ".4f")}
 
 ### Smiles (quadratic in k = ln(K/F), fitted on |k| <= 0.3)
 
