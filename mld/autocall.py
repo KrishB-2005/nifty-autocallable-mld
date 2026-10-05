@@ -102,9 +102,15 @@ def _control_set(spec, ps, market, spot, s_ref, which):
     'full' : that call, plus a digital at each autocall trigger (these carry the
              early-redemption events) and puts struck at 100% and at the barrier
              (these carry the downside).
+    'events': the note's own path events (called at t_k, survived above the
+             barrier, asset-settled loss) priced with multivariate normals in
+             `analytic.py`. Exact for a final-fixing barrier.
     """
     if which in (None, "none"):
         return None, None
+    if which == "events":
+        from .analytic import event_controls
+        return event_controls(spec, ps, market, s_ref)
     t = np.asarray(spec.obs_times, dtype=float)
     T = spec.maturity
     S = spot * ps.rel_obs
