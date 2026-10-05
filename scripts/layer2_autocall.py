@@ -67,7 +67,7 @@ Term sheet: 3y on NIFTY 50, initial fixing {m.spot:,.2f}, annual observations, a
 | Derivative overlay (note minus bond) | {res.overlay:+.4f} |
 | Structuring margin at issue price 100 | {100 - res.price.value:.4f} |
 | Expected life | {res.expected_life:.2f} years |
-| Probability the barrier is ever touched | {res.prob_ki:.2%} |
+| Probability the barrier is touched while the note is alive | {res.prob_ki:.2%} |
 | Probability of capital loss | {res.prob_loss:.2%} |
 | Average redemption when there is a loss | {avg_loss_redemption:.2f} |
 | Coupon for a 98.00 fair value (2% margin) | {c_fair:.4%} p.a. |

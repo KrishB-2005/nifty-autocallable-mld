@@ -193,7 +193,7 @@ def main():
         f = lambda x: "" if np.isnan(x) else f"{x:.2f}"
         md.append(f"| {r.group} | {r.item} | {r.ours:.6f} | {r.quantlib:.6f} | {r.diff_bp:+.2f} | "
                   f"{f(r.se_bp)} | {f(r.z)} | {r.unit} |")
-    (out / "validation.md").write_text("\n".join(md) + "\n")
+    (out / "validation.md").write_text("\n".join(md) + "\n", newline="\n")
     print("\n".join(md))
     print(f"\n{time.time() - t0:.0f}s")
 

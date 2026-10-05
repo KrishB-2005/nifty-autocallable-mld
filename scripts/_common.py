@@ -44,7 +44,7 @@ def save(fig, name):
 
 
 def write_md(name, text):
-    (RES / name).write_text(text.strip() + "\n")
+    (RES / name).write_text(text.strip() + "\n", newline="\n")
     print(f"wrote results/{name}")
 
 

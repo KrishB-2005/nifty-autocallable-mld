@@ -11,7 +11,7 @@ Term sheet: 3y on NIFTY 50, initial fixing 22,421.95, annual observations, autoc
 | Derivative overlay (note minus bond) | +18.3649 |
 | Structuring margin at issue price 100 | 1.6636 |
 | Expected life | 1.54 years |
-| Probability the barrier is ever touched | 3.91% |
+| Probability the barrier is touched while the note is alive | 3.46% |
 | Probability of capital loss | 3.34% |
 | Average redemption when there is a loss | 74.00 |
 | Coupon for a 98.00 fair value (2% margin) | 8.6897% p.a. |
@@ -31,5 +31,5 @@ Barrier monitoring convention:
 
 | barrier | price | prob_ki | prob_loss |
 |---|---|---|---|
-| Daily closes (base) | 98.3364 | 0.0391 | 0.0334 |
-| Final fixing only | 98.6834 | 0.0133 | 0.0116 |
+| Daily closes (base) | 98.3364 | 0.0346 | 0.0334 |
+| Final fixing only | 98.6834 | 0.0116 | 0.0116 |
