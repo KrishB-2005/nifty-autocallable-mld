@@ -10,7 +10,8 @@ implied variance. Paths are stored relative to spot (S/S0), so one simulation
 can be revalued at any spot, which is what the scenario grid and spot bumps use.
 
 Only what payoffs need is kept: S/S0 at observation dates and the running
-minimum (for a knock-in barrier). Full paths would be 756 steps x N floats.
+minimum up to each observation date (for a knock-in barrier, which only
+matters while the note is alive). Full paths would be 756 steps x N floats.
 """
 from __future__ import annotations
 
@@ -50,7 +51,7 @@ def make_grid(obs_times, steps_per_year: int = 252, daily: bool = True) -> TimeG
 @dataclass
 class PathSummary:
     rel_obs: np.ndarray            # (N, n_obs) S(t_k)/S0
-    rel_min: np.ndarray | None     # (N,) min over grid of S/S0
+    rel_min: np.ndarray | None     # (N, n_obs) running min of S/S0 up to each observation date
     score_delta: np.ndarray | None  # (N,) d ln p / d ln S0 = Z_1 / (sigma_1 sqrt(dt_1))
     score_vega: np.ndarray | None   # (N,) d ln p / d sigma for a parallel shift of step vols
     antithetic: bool
@@ -99,6 +100,7 @@ def simulate(market: Market, grid: TimeGrid, n_paths: int, seed: int = 0,
         x = np.zeros(b)
         mn = np.zeros(b) if track_min else None
         obs = np.empty((b, n_obs))
+        mins = np.empty((b, n_obs)) if track_min else None
         s_delta = np.zeros(b) if scores else None
         s_vega = np.zeros(b) if scores else None
         for i in range(len(dt)):
@@ -115,7 +117,9 @@ def simulate(market: Market, grid: TimeGrid, n_paths: int, seed: int = 0,
             k = obs_pos.get(i + 1)
             if k is not None:
                 obs[:, k] = x
-        parts = [np.exp(obs), np.exp(mn) if track_min else None, s_delta, s_vega]
+                if track_min:
+                    mins[:, k] = mn
+        parts = [np.exp(obs), np.exp(mins) if track_min else None, s_delta, s_vega]
         if antithetic:
             plus.append([p[:h] if p is not None else None for p in parts])
             minus.append([p[h:] if p is not None else None for p in parts])

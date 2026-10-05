@@ -102,3 +102,22 @@ def test_fair_coupon_hits_the_target_price():
     c = fair_coupon(spec, TERM, 98.0, 50_000, seed=8, credit_spread=0.01)
     r = price(replace(spec, coupon_rate=c), TERM, 50_000, seed=8, control=None, credit_spread=0.01)
     assert r.price.value == pytest.approx(98.0, abs=1e-9)
+
+
+def test_barrier_touches_after_an_early_call_do_not_count():
+    """Path A is called at year 1 and then crashes through the barrier; path B
+    touches the barrier in year 2 and ends below 100%. Only B is knocked in."""
+    from mld.autocall import cashflows
+    from mld.paths import PathSummary
+    rel_obs = np.array([[1.10, 0.60, 0.50],
+                        [0.90, 0.65, 0.80]])
+    rel_min = np.array([[0.95, 0.55, 0.45],
+                        [0.85, 0.60, 0.60]])
+    ps = PathSummary(rel_obs, rel_min, None, None, antithetic=False)
+    for daily in (True, False):
+        spec = AutocallSpec(ki_daily=daily)
+        principal, cyears, k_pay, knocked = cashflows(spec, ps, 100.0, 100.0)
+        assert k_pay[0] == 0 and cyears[0] == 1.0 and principal[0] == 100.0
+        assert not knocked[0]
+    principal, _, _, knocked = cashflows(AutocallSpec(ki_daily=True), ps, 100.0, 100.0)
+    assert knocked[1] and principal[1] == pytest.approx(80.0)

@@ -95,7 +95,8 @@ def ql_paths(m: Market, obs_times, steps, n_pairs, seed=2026) -> PathSummary:
         plus.append(np.fromiter(gen.next().value(), float, len(grid)))
         minus.append(np.fromiter(gen.antithetic().value(), float, len(grid)))
     s = np.vstack(plus + minus) / m.spot
-    return PathSummary(s[:, obs_idx], s.min(axis=1), None, None, antithetic=True)
+    run_min = np.minimum.accumulate(s, axis=1)[:, obs_idx]
+    return PathSummary(s[:, obs_idx], run_min, None, None, antithetic=True)
 
 
 # ------------------------------------------------------------------- our side
@@ -103,7 +104,7 @@ def our_down_in_put(m: Market, K, B, T, n, seed=7):
     grid = make_grid([T], 252, daily=True)
     ps = simulate(m, grid, n, seed, antithetic=True, track_min=True)
     ST = m.spot * ps.rel_obs[:, 0]
-    hit = m.spot * ps.rel_min <= B
+    hit = m.spot * ps.rel_min[:, -1] <= B
     pv = m.curve.df(T) * np.where(hit, np.maximum(K - ST, 0.0), 0.0)
     y = ps.pair_mean(pv)
     return y.mean(), y.std(ddof=1) / np.sqrt(len(y))

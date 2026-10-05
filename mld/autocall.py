@@ -51,7 +51,7 @@ class AutocallResult:
     price: MCResult
     zcb: float                      # PV of 100 at maturity on the issuer curve
     prob_call: np.ndarray           # probability of redeeming with the coupon at each date (last = maturity)
-    prob_ki: float                  # probability the barrier is ever breached
+    prob_ki: float                  # probability the barrier is breached while the note is alive
     prob_loss: float                # probability of getting back less than 100
     expected_life: float            # years
     method: str = ""
@@ -85,11 +85,13 @@ def cashflows(spec: AutocallSpec, ps: PathSummary, spot: float, s_ref: float):
         coupon_years[called] = spec.obs_times[k]
         alive &= ~called
 
+    # knocked in while the note was still alive (touches after an early call don't count)
     xT = x[:, -1]
     if spec.ki_daily:
-        knocked = spot * ps.rel_min / s_ref <= spec.ki_barrier
+        rows = np.arange(x.shape[0])
+        knocked = spot * ps.rel_min[rows, k_pay] / s_ref <= spec.ki_barrier
     else:
-        knocked = xT <= spec.ki_barrier
+        knocked = alive & (xT <= spec.ki_barrier)
     loss = alive & knocked
     principal[loss] = spec.notional * np.minimum(1.0, xT[loss])
     return principal, coupon_years, k_pay, knocked
