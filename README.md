@@ -29,9 +29,9 @@ down-and-in put that the investor is short.
 | Structuring margin at issue price 100 | 1.66 |
 | Coupon for a 2% margin (fair value 98) | 8.69% p.a. |
 | Risk-neutral probability of capital loss | 3.3% |
-| Expected life | 1.54 years (66% chance of being called after year 1) |
+| Expected life | 1.54 years (66% chance of being called at the first observation) |
 | Delta / vega | +0.36 per 1% NIFTY move / -0.56 per vol point |
-| Price if vol is read off the smile at the barrier instead of ATM | 94.6 (-3.7) |
+| Rough skew check: flat vol read off the smile at the barrier, not ATM | 94.6 (-3.7) |
 
 ## How the numbers are checked
 
@@ -53,7 +53,7 @@ QuantLib is used only as a benchmark here; nothing in `mld/` imports it.
 | 3y ATM call, calibrated term structures, closed form | 4687.5575 | 4687.5575 | +0.00 | |
 | 3y ATM call, our MC (400k) | 4683.80 | 4687.56 | -8.0 | 0.96 |
 | Cash-or-nothing digital, 3y | 0.630103 | 0.630103 | +0.00 | |
-| Down-and-in put, daily monitoring, vs QL MC | 177.99 | 172.27 | +332 | 1.36 |
+| Down-and-in put, daily monitoring, vs QL MC (60k paths) | 177.99 | 172.27 | +332 | 1.36 |
 | Down-and-in put vs QL analytic with BGK barrier shift | 177.99 | 177.18 | +46 | 0.54 |
 | Down-and-in put vs QL analytic, continuous barrier | 177.99 | 184.52 | -354 | 4.31 |
 | 1-observation note vs QL digital decomposition | 99.0198 | 99.0187 | +0.10 (of notional) | 0.39 |
@@ -95,19 +95,22 @@ valuations on the same paths ([results](results/layer2.md)).
 ## Layer 3: variance reduction, Greeks, scenarios
 
 **Variance reduction** ([results](results/layer3_variance_reduction.md)). The
-vanilla call alone is a weak control for this note (1.1x): it only pays in
-states where the note has already been called. The note's value sits in joint
-events that no single-date option sees. Using those events as controls, priced
+vanilla call alone is a weak control for this note (1.1x): it pays only when
+NIFTY ends above 100%, and on most of those paths the note was already called in
+year 1 or 2. The note's value sits in joint events that no single-date option sees. Using those events as controls, priced
 exactly with multivariate normals, leaves only the daily-barrier residual to
 simulate.
 
-| Method (256k paths) | SE (bp) | Variance reduction | Gain at equal time |
+| Method (256k paths) | SE (bp) | Variance reduction | Gain at equal time (approx.) |
 |---|---:|---:|---:|
 | Plain MC | 1.93 | 1.0x | 1.0x |
-| Antithetic | 1.81 | 1.1x | 1.9x |
+| Antithetic | 1.81 | 1.1x | 2x |
 | Control variate: ATM call | 1.81 | 1.1x | 1.1x |
-| Antithetic + vanilla controls (call, digitals, puts) | 1.07 | 3.3x | 5.4x |
-| Antithetic + event controls | 0.46 | 17.9x | 25.8x |
+| Antithetic + vanilla controls (call, digitals, puts) | 1.07 | 3.3x | 5x |
+| Antithetic + event controls | 0.46 | 17.9x | 25 to 30x |
+
+The equal-time column divides by wall-clock run time, so it moves by a few
+percent between runs; the variance reduction column is exact for the seeds used.
 
 ![Variance reduction](figures/layer3_variance_reduction.png)
 
@@ -144,8 +147,9 @@ exchange-computed theoretical prices.
 
 * **Forwards** come from futures where they exist and from put-call parity
   elsewhere. Box spreads would also give the discount rate, but NSE option closes
-  are asynchronous enough that box-implied rates range from -23% to +35%, so rates
-  come from an INR curve and only the forward from the market.
+  are asynchronous enough that box-implied rates range from -23% to +35%
+  ([table](results/layer4_calibration.md)), so rates come from an INR curve and
+  only the forward from the market.
 * **Implied carry is about 6.5%**, at or above the INR zero curve, so the implied
   dividend yield comes out slightly negative. NIFTY futures trade rich to G-secs.
   The pricer uses market forwards because futures are the hedge.
@@ -157,13 +161,15 @@ exchange-computed theoretical prices.
 
 ## What breaks this model
 
-These are ordered by how much they move the price of this note.
+Roughly in order of how much they matter for this note.
 
 1. **No smile.** Vol is deterministic and ATM. The investor is short a put struck
-   70% of spot, which at 3y is about 57% of the forward, deep in the wing where
-   NIFTY implied vol is several points above ATM. Pricing with the Dec-2028 smile's
-   vol at the barrier strike (an extrapolation past the fitted range) instead of
-   ATM moves the note from 98.35 to 94.61. A local vol or
+   at 100% that only switches on if NIFTY touches 70% of spot. At 3y that barrier
+   is about 57% of the forward, deep in the wing where NIFTY implied vol is several
+   points above ATM. Pricing with one flat vol read off the Dec-2028 smile at the
+   barrier (an extrapolation past the fitted range) moves the note from 98.35 to
+   94.61. That is a crude check, since it raises vol everywhere and not just in
+   the wing, but it shows the size of the problem. A local vol or
    stochastic vol model calibrated to the whole surface is the fix. Even then,
    the long-dated wing rests on a handful of trades: in this file, 9 quotes for
    Dec 2028 and none liquid beyond.
@@ -188,7 +194,7 @@ These are ordered by how much they move the price of this note.
 
 ```bash
 pip install -r requirements.txt
-python -m pytest            # 35 tests, about 10 seconds
+python -m pytest            # 36 tests, about 10 seconds
 python scripts/run_all.py   # every figure and results table, about 3 minutes
 ```
 
